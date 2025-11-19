@@ -9,96 +9,117 @@ datasource db {
 }
 
 model aiprediction {
-  id         String   @id @db.Char(36)
-  upload_id  String?  @db.Char(36)
-  user_id    String?  @db.Char(36)
+  id         Int      @id @default(autoincrement())
+  upload_id  Int?
+  user_id    Int?
   payload    Json?
   created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  upload     upload?  @relation("AiPrediction_Upload", fields: [upload_id], references: [id])
+  user       user?    @relation("AiPrediction_User", fields: [user_id], references: [id])
 
-  @@index([upload_id], map: "AiPrediction_upload_id_fkey")
-  @@index([user_id], map: "AiPrediction_user_id_fkey")
+  @@index([upload_id])
+  @@index([user_id])
 }
 
 model fooditem {
-  id              String            @id @db.Char(36)
+  id              Int               @id @default(autoincrement())
   name            String
   category        fooditem_category
   expiration_days Int?
   cost_per_unit   Decimal?          @db.Decimal(10, 2)
   unit            String?
   created_at      DateTime          @default(now())
-  updated_at      DateTime
+  updated_at      DateTime          @updatedAt
+  inventories     inventory[]       @relation("Inventory_FoodItem")
+  logs            log[]             @relation("Log_FoodItem")
 }
 
 model inventory {
-  id             String           @id @db.Char(36)
-  user_id        String           @db.Char(36)
-  food_item_id   String?          @db.Char(36)
+  id             Int              @id @default(autoincrement())
+  user_id        Int
+  food_item_id   Int?
   status         inventory_status @default(Available)
   quantity       Decimal          @default(0.000) @db.Decimal(12, 3)
   unit           String?
-  purchased_date DateTime?        @db.Date
-  expiry_date    DateTime?        @db.Date
+  purchased_date DateTime?
+  expiry_date    DateTime?
   notes          String?
   created_at     DateTime         @default(now())
-  updated_at     DateTime
+  updated_at     DateTime         @updatedAt
+  fooditem       fooditem?        @relation("Inventory_FoodItem", fields: [food_item_id], references: [id])
+  user           user             @relation("Inventory_User", fields: [user_id], references: [id])
+  uploads        upload[]         @relation("Upload_Inventory")
 
-  @@index([food_item_id], map: "Inventory_food_item_id_fkey")
-  @@index([user_id], map: "Inventory_user_id_fkey")
+  @@index([food_item_id])
+  @@index([user_id])
 }
 
 model log {
-  id           String        @id @db.Char(36)
+  id           Int           @id @default(autoincrement())
   log_title    String?
-  user_id      String        @db.Char(36)
-  food_item_id String?       @db.Char(36)
+  user_id      Int
+  food_item_id Int?
   quantity     Decimal       @default(0.000) @db.Decimal(12, 3)
   category     log_category?
   logged_at    DateTime      @default(now())
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+  fooditem     fooditem?     @relation("Log_FoodItem", fields: [food_item_id], references: [id])
+  user         user          @relation("Log_User", fields: [user_id], references: [id])
+  uploads      upload[]      @relation("Upload_Log")
 
-  @@index([food_item_id], map: "Log_food_item_id_fkey")
-  @@index([user_id], map: "Log_user_id_fkey")
+  @@index([food_item_id])
+  @@index([user_id])
 }
 
 model resource {
-  id               String                     @id @db.Char(36)
+  id               Int                        @id @default(autoincrement())
   title            String
   description      String?
   url              String?
   related_category resource_related_category?
   type             String?
   created_at       DateTime                   @default(now())
+  updated_at       DateTime                   @updatedAt
 }
 
 model upload {
-  id                      String   @id @db.Char(36)
+  id                      Int            @id @default(autoincrement())
   filename                String
   url                     String
-  associated_inventory_id String?  @db.Char(36)
-  associated_log_id       String?  @db.Char(36)
-  created_at              DateTime @default(now())
+  associated_inventory_id Int?
+  associated_log_id       Int?
+  created_at              DateTime       @default(now())
+  updated_at              DateTime       @updatedAt
+  ai_predictions          aiprediction[] @relation("AiPrediction_Upload")
+  associated_inventory    inventory?     @relation("Upload_Inventory", fields: [associated_inventory_id], references: [id])
+  associated_log          log?           @relation("Upload_Log", fields: [associated_log_id], references: [id])
 
-  @@index([associated_inventory_id], map: "Upload_associated_inventory_id_fkey")
-  @@index([associated_log_id], map: "Upload_associated_log_id_fkey")
+  @@index([associated_inventory_id])
+  @@index([associated_log_id])
 }
 
 model user {
-  id                  String     @id @db.Char(36)
+  id                  Int            @id @default(autoincrement())
   full_name           String
-  email               String     @unique(map: "User_email_key")
+  email               String         @unique
   role                user_role?
   password_hash       String
   household_size      Int?
   dietary_preferences Json?
   budget_range        String?
   location            String?
-  created_at          DateTime   @default(now())
-  updated_at          DateTime
+  created_at          DateTime       @default(now())
+  updated_at          DateTime       @updatedAt
+  ai_predictions      aiprediction[] @relation("AiPrediction_User")
+  inventories         inventory[]    @relation("Inventory_User")
+  logs                log[]          @relation("Log_User")
 }
 
 enum fooditem_category {
   Snacks
-  Vegitabe
+  Vegetable
   Meat
   Dairy
   Drinks
@@ -127,7 +148,7 @@ enum resource_related_category {
 
 enum log_category {
   Snacks
-  Vegitabe
+  Vegetable
   Meat
   Dairy
   Drinks

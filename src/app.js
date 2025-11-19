@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import router from './routes/index.js';
+import router from './routes/index.routes.js';
 import errorMiddleware from './middleware/error.middleware.js';
 import requestLogger from './middleware/requestLogger.js';
 
