@@ -7,13 +7,96 @@ datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
-enum Role {
-  Individual
-  Family
-  Community
+
+model aiprediction {
+  id         String   @id @db.Char(36)
+  upload_id  String?  @db.Char(36)
+  user_id    String?  @db.Char(36)
+  payload    Json?
+  created_at DateTime @default(now())
+
+  @@index([upload_id], map: "AiPrediction_upload_id_fkey")
+  @@index([user_id], map: "AiPrediction_user_id_fkey")
 }
 
-enum FoodCategory {
+model fooditem {
+  id              String            @id @db.Char(36)
+  name            String
+  category        fooditem_category
+  expiration_days Int?
+  cost_per_unit   Decimal?          @db.Decimal(10, 2)
+  unit            String?
+  created_at      DateTime          @default(now())
+  updated_at      DateTime
+}
+
+model inventory {
+  id             String           @id @db.Char(36)
+  user_id        String           @db.Char(36)
+  food_item_id   String?          @db.Char(36)
+  status         inventory_status @default(Available)
+  quantity       Decimal          @default(0.000) @db.Decimal(12, 3)
+  unit           String?
+  purchased_date DateTime?        @db.Date
+  expiry_date    DateTime?        @db.Date
+  notes          String?
+  created_at     DateTime         @default(now())
+  updated_at     DateTime
+
+  @@index([food_item_id], map: "Inventory_food_item_id_fkey")
+  @@index([user_id], map: "Inventory_user_id_fkey")
+}
+
+model log {
+  id           String        @id @db.Char(36)
+  log_title    String?
+  user_id      String        @db.Char(36)
+  food_item_id String?       @db.Char(36)
+  quantity     Decimal       @default(0.000) @db.Decimal(12, 3)
+  category     log_category?
+  logged_at    DateTime      @default(now())
+
+  @@index([food_item_id], map: "Log_food_item_id_fkey")
+  @@index([user_id], map: "Log_user_id_fkey")
+}
+
+model resource {
+  id               String                     @id @db.Char(36)
+  title            String
+  description      String?
+  url              String?
+  related_category resource_related_category?
+  type             String?
+  created_at       DateTime                   @default(now())
+}
+
+model upload {
+  id                      String   @id @db.Char(36)
+  filename                String
+  url                     String
+  associated_inventory_id String?  @db.Char(36)
+  associated_log_id       String?  @db.Char(36)
+  created_at              DateTime @default(now())
+
+  @@index([associated_inventory_id], map: "Upload_associated_inventory_id_fkey")
+  @@index([associated_log_id], map: "Upload_associated_log_id_fkey")
+}
+
+model user {
+  id                  String     @id @db.Char(36)
+  full_name           String
+  email               String     @unique(map: "User_email_key")
+  role                user_role?
+  password_hash       String
+  household_size      Int?
+  dietary_preferences Json?
+  budget_range        String?
+  location            String?
+  created_at          DateTime   @default(now())
+  updated_at          DateTime
+}
+
+enum fooditem_category {
   Snacks
   Vegitabe
   Meat
@@ -22,7 +105,19 @@ enum FoodCategory {
   Fast_Food
 }
 
-enum ResourceCategory {
+enum inventory_status {
+  Available
+  Expired
+  Consumed
+}
+
+enum user_role {
+  Individual
+  Family
+  Community
+}
+
+enum resource_related_category {
   Waste_Reduction
   Budget_Tips
   Dietary_Tips
@@ -30,110 +125,11 @@ enum ResourceCategory {
   Storage_Tips
 }
 
-enum InventoryStatus {
-  Available
-  Expired
-  Consumed
-}
-
-model User {
-  id                   String        @id @default(uuid()) @db.Char(36)
-  full_name            String
-  email                String        @unique
-  role                 Role?
-  password_hash        String
-  household_size       Int?
-  dietary_preferences  Json?         
-  budget_range         String?
-  location             String?
-  created_at           DateTime      @default(now())
-  updated_at           DateTime      @updatedAt
-
-  inventories          Inventory[]   
-  logs                 Log[] 
-  aiPredictions        AiPrediction[]
-}
-
-model FoodItem {
-  id                    String       @id @default(uuid()) @db.Char(36)
-  name                  String
-  category              FoodCategory
-  expiration_days       Int?
-  cost_per_unit         Decimal?     @db.Decimal(10,2)
-  unit                  String?
-  created_at            DateTime     @default(now())
-  updated_at            DateTime     @updatedAt
-
-  inventories           Inventory[]
-  logs                  Log[]
-}
-
-model Inventory {
-  id                      String         @id @default(uuid()) @db.Char(36)
-  user_id                 String         @db.Char(36)
-  food_item_id            String?        @db.Char(36)
-  status                  InventoryStatus @default(Available)
-  quantity                Decimal        @default(0) @db.Decimal(12,3)
-  unit                    String?
-  purchased_date          DateTime?      @db.Date
-  expiry_date             DateTime?      @db.Date
-  notes                   String?
-  created_at              DateTime       @default(now())
-  updated_at              DateTime       @updatedAt
-
-  // relations
-  user                    User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  foodItem                FoodItem?      @relation(fields: [food_item_id], references: [id], onDelete: SetNull)
-  uploads                 Upload[]       @relation("UploadInventory")
-}
-
-model Log {
-  id             String       @id @default(uuid()) @db.Char(36)
-  log_title      String?
-  user_id        String       @db.Char(36)
-  food_item_id   String?      @db.Char(36)
-  quantity       Decimal      @default(0) @db.Decimal(12,3)
-  category       FoodCategory?
-  logged_at      DateTime     @default(now())
-
-  // relations
-  user           User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  foodItem       FoodItem?    @relation(fields: [food_item_id], references: [id], onDelete: SetNull)
-  uploads        Upload[]     @relation("UploadLog")
-}
-
-model Resource {
-  id                String            @id @default(uuid()) @db.Char(36)
-  title             String
-  description       String?
-  url               String?
-  related_category  ResourceCategory?
-  type              String?
-  created_at        DateTime          @default(now())
-}
-
-model Upload {
-  id                       String       @id @default(uuid()) @db.Char(36)
-  filename                 String
-  url                      String
-  associated_inventory_id  String?      @db.Char(36)
-  associated_log_id        String?      @db.Char(36)
-  created_at               DateTime     @default(now())
-
-  // relations
-  inventory                Inventory?   @relation("UploadInventory", fields: [associated_inventory_id], references: [id], onDelete: SetNull)
-  log                      Log?         @relation("UploadLog", fields: [associated_log_id], references: [id], onDelete: SetNull)
-  aiPredictions            AiPrediction[]
-}
-
-model AiPrediction {
-  id          String   @id @default(uuid()) @db.Char(36)
-  upload_id   String?  @db.Char(36)
-  user_id     String?  @db.Char(36)
-  payload     Json?
-  created_at  DateTime @default(now())
-
-  // relations
-  upload      Upload?  @relation(fields: [upload_id], references: [id], onDelete: SetNull)
-  user        User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+enum log_category {
+  Snacks
+  Vegitabe
+  Meat
+  Dairy
+  Drinks
+  Fast_Food
 }

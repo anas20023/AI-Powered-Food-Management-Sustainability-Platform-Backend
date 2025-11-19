@@ -4,6 +4,7 @@ npm-debug.log
 .env
 .DS_Store
 *.log
+migrations
 
 # Build artifacts
 dist/
