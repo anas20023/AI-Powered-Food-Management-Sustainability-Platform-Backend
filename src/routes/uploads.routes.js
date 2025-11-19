@@ -1,12 +1,11 @@
 import express from "express";
-// import uploadMiddleware from "../middlewares/upload.middleware.js";
-// import * as uploadController from "../controllers/uploads.controller.js";
-// import auth from "../middlewares/auth.middleware.js";
 
+import * as uploadsCtrl from "../controllers/uploads.controller.js";
+import auth from "../middlewares/auth.middleware.js";
 const router = express.Router();
 
-// router.post("/", auth, uploadMiddleware.single("file"), uploadFile);
-// router.get("/:id", auth, getUploadById);
-// router.delete("/:id", auth, deleteUpload);
+router.post("/", auth,uploadsCtrl.uploadFile);
+router.get("/:id", auth, uploadsCtrl.getUploadById);
+router.delete("/:id", auth, uploadsCtrl.deleteUpload);
 
 export default router;

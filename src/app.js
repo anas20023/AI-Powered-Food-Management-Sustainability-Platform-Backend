@@ -2,8 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import router from './routes/index.routes.js';
-import errorMiddleware from './middleware/error.middleware.js';
-import requestLogger from './middleware/requestLogger.js';
+import errorMiddleware from './middlewares/error.middleware.js';
+import requestLogger from './middlewares/requestLogger.js';
+
 
 const app = express();
 app.use(requestLogger)
@@ -16,6 +17,7 @@ app.use('/',(req,res)=>{
         "message": "Welcome to Server !"
     })
 })
+
 app.use(errorMiddleware);
 
 export default app;
