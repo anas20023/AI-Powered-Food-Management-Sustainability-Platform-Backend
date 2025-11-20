@@ -107,6 +107,11 @@ export const updateInventory = async ({ userId, id, updates }) => {
   if (!inv) throwError(404, "Inventory item not found");
   if (inv.user_id !== uid) throwError(403, "Forbidden");
 
+  // Block modifications if inventory is expired
+  if (String(inv.status).toLowerCase() === "expired") {
+    throwError(400, "Cannot modify an expired inventory item");
+  }
+
   // sanitize updates: convert numeric/date fields if provided
   const data = { ...updates };
   if (data.quantity !== undefined) {
@@ -117,7 +122,35 @@ export const updateInventory = async ({ userId, id, updates }) => {
   if (data.purchased_date) data.purchased_date = new Date(data.purchased_date);
   if (data.expiry_date) data.expiry_date = new Date(data.expiry_date);
 
-  const updated = await prisma.inventory.update({ where: { id: iid }, data });
+  // Prepare log details: find food item to get category (best-effort)
+  let foodItem = null;
+  try {
+    if (inv.food_item_id) {
+      foodItem = await prisma.fooditem.findUnique({ where: { id: inv.food_item_id } });
+    }
+  } catch (e) {
+    // if lookup fails, continue without category; logging is best-effort
+    foodItem = null;
+  }
+
+  // Build log entry content
+  const logTitle = `Inventory updated (id=${iid})`;
+  const logPayload = {
+    log_title: logTitle,
+    user_id: uid,
+    food_item_id: inv.food_item_id ?? null,
+    // store the new quantity if provided, otherwise the previous quantity
+    quantity: data.quantity !== undefined ? data.quantity : inv.quantity,
+    category: foodItem?.category ?? null,
+    // logged_at, created_at will default in DB / Prisma
+  };
+
+  // Use a transaction so update + log are atomic
+  const [updated] = await prisma.$transaction([
+    prisma.inventory.update({ where: { id: iid }, data }),
+    prisma.log.create({ data: logPayload })
+  ]);
+
   return updated;
 };
 
@@ -132,6 +165,34 @@ export const deleteInventory = async ({ userId, id }) => {
   if (!inv) throwError(404, "Inventory item not found");
   if (inv.user_id !== uid) throwError(403, "Forbidden");
 
-  await prisma.inventory.delete({ where: { id: iid } });
+  // Block deletion if inventory is expired
+  if (String(inv.status).toLowerCase() === "expired") {
+    throwError(400, "Cannot delete an expired inventory item");
+  }
+
+  // Best-effort fetch of food item for category in the log
+  let foodItem = null;
+  try {
+    if (inv.food_item_id) {
+      foodItem = await prisma.fooditem.findUnique({ where: { id: inv.food_item_id } });
+    }
+  } catch (e) {
+    foodItem = null;
+  }
+
+  const logPayload = {
+    log_title: `Inventory deleted (id=${iid})`,
+    user_id: uid,
+    food_item_id: inv.food_item_id ?? null,
+    quantity: inv.quantity ?? 0,
+    category: foodItem?.category ?? null,
+  };
+
+  // Transaction: create log then delete inventory
+  await prisma.$transaction([
+    prisma.log.create({ data: logPayload }),
+    prisma.inventory.delete({ where: { id: iid } })
+  ]);
+
   return true;
 };
