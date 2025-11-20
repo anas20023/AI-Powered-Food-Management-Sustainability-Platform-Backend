@@ -31,7 +31,7 @@ export const updateInventoryItem = async (req, res) => {
 
 export const deleteInventoryItem = async (req, res) => {
   try {
-    await inventoryService.deleteInventory({ userId: req.user?.id, id: req.params.id });
+    await inventoryService.deleteInventory({ userId: parseInt(req.user?.id), id: parseInt(req.params.id) });
     return success(res, null, "Inventory item deleted", 200);
   } catch (err) {
     return sendError(res, err.message || "Failed", err.status || 500);

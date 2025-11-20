@@ -15,14 +15,16 @@ CREATE TABLE `aiprediction` (
 -- CreateTable
 CREATE TABLE `fooditem` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `user_id` INTEGER NULL,
     `name` VARCHAR(191) NOT NULL,
     `category` ENUM('Snacks', 'Vegetable', 'Meat', 'Dairy', 'Drinks', 'Fast_Food') NOT NULL,
     `expiration_days` INTEGER NULL,
-    `cost_per_unit` DECIMAL(10, 2) NULL,
+    `cost_per_unit` INTEGER NULL,
     `unit` VARCHAR(191) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL,
 
+    INDEX `fooditem_user_id_idx`(`user_id`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -32,7 +34,7 @@ CREATE TABLE `inventory` (
     `user_id` INTEGER NOT NULL,
     `food_item_id` INTEGER NULL,
     `status` ENUM('Available', 'Expired', 'Consumed') NOT NULL DEFAULT 'Available',
-    `quantity` DECIMAL(12, 3) NOT NULL DEFAULT 0.000,
+    `quantity` INTEGER NOT NULL DEFAULT 0,
     `unit` VARCHAR(191) NULL,
     `purchased_date` DATETIME(3) NULL,
     `expiry_date` DATETIME(3) NULL,
@@ -51,7 +53,7 @@ CREATE TABLE `log` (
     `log_title` VARCHAR(191) NULL,
     `user_id` INTEGER NOT NULL,
     `food_item_id` INTEGER NULL,
-    `quantity` DECIMAL(12, 3) NOT NULL DEFAULT 0.000,
+    `quantity` INTEGER NOT NULL DEFAULT 0,
     `category` ENUM('Snacks', 'Vegetable', 'Meat', 'Dairy', 'Drinks', 'Fast_Food') NULL,
     `logged_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -81,6 +83,7 @@ CREATE TABLE `upload` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `filename` VARCHAR(191) NOT NULL,
     `url` VARCHAR(191) NOT NULL,
+    `user_id` INTEGER NULL,
     `associated_inventory_id` INTEGER NULL,
     `associated_log_id` INTEGER NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -88,6 +91,20 @@ CREATE TABLE `upload` (
 
     INDEX `upload_associated_inventory_id_idx`(`associated_inventory_id`),
     INDEX `upload_associated_log_id_idx`(`associated_log_id`),
+    INDEX `upload_user_id_idx`(`user_id`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `UploadFoodItem` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `uploadId` INTEGER NOT NULL,
+    `foodItemId` INTEGER NOT NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    INDEX `UploadFoodItem_uploadId_idx`(`uploadId`),
+    INDEX `UploadFoodItem_foodItemId_idx`(`foodItemId`),
+    UNIQUE INDEX `UploadFoodItem_uploadId_foodItemId_key`(`uploadId`, `foodItemId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -116,6 +133,9 @@ ALTER TABLE `aiprediction` ADD CONSTRAINT `aiprediction_upload_id_fkey` FOREIGN 
 ALTER TABLE `aiprediction` ADD CONSTRAINT `aiprediction_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `fooditem` ADD CONSTRAINT `fooditem_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `inventory` ADD CONSTRAINT `inventory_food_item_id_fkey` FOREIGN KEY (`food_item_id`) REFERENCES `fooditem`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -132,3 +152,12 @@ ALTER TABLE `upload` ADD CONSTRAINT `upload_associated_inventory_id_fkey` FOREIG
 
 -- AddForeignKey
 ALTER TABLE `upload` ADD CONSTRAINT `upload_associated_log_id_fkey` FOREIGN KEY (`associated_log_id`) REFERENCES `log`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `upload` ADD CONSTRAINT `upload_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `UploadFoodItem` ADD CONSTRAINT `UploadFoodItem_uploadId_fkey` FOREIGN KEY (`uploadId`) REFERENCES `upload`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `UploadFoodItem` ADD CONSTRAINT `UploadFoodItem_foodItemId_fkey` FOREIGN KEY (`foodItemId`) REFERENCES `fooditem`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

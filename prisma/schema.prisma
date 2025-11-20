@@ -24,15 +24,20 @@ model aiprediction {
 
 model fooditem {
   id              Int               @id @default(autoincrement())
+  user_id         Int?
   name            String
   category        fooditem_category
   expiration_days Int?
-  cost_per_unit   Decimal?          @db.Decimal(10, 2)
-  unit            String?           @default("")
+  cost_per_unit   Int?
+  unit            String?
   created_at      DateTime          @default(now())
   updated_at      DateTime          @updatedAt
+  uploads         UploadFoodItem[]
+  user            user?             @relation("FoodItem_User", fields: [user_id], references: [id])
   inventories     inventory[]       @relation("Inventory_FoodItem")
   logs            log[]             @relation("Log_FoodItem")
+
+  @@index([user_id])
 }
 
 model inventory {
@@ -40,7 +45,7 @@ model inventory {
   user_id        Int
   food_item_id   Int?
   status         inventory_status @default(Available)
-  quantity       Decimal          @default(0.000) @db.Decimal(12, 3)
+  quantity       Int              @default(0)
   unit           String?
   purchased_date DateTime?
   expiry_date    DateTime?
@@ -60,7 +65,7 @@ model log {
   log_title    String?
   user_id      Int
   food_item_id Int?
-  quantity     Decimal       @default(0.000) @db.Decimal(12, 3)
+  quantity     Int           @default(0)
   category     log_category?
   logged_at    DateTime      @default(now())
   created_at   DateTime      @default(now())
@@ -85,19 +90,37 @@ model resource {
 }
 
 model upload {
-  id                      Int            @id @default(autoincrement())
+  id                      Int              @id @default(autoincrement())
   filename                String
   url                     String
+  user_id                 Int?
   associated_inventory_id Int?
   associated_log_id       Int?
-  created_at              DateTime       @default(now())
-  updated_at              DateTime       @updatedAt
-  ai_predictions          aiprediction[] @relation("AiPrediction_Upload")
-  associated_inventory    inventory?     @relation("Upload_Inventory", fields: [associated_inventory_id], references: [id])
-  associated_log          log?           @relation("Upload_Log", fields: [associated_log_id], references: [id])
+  created_at              DateTime         @default(now())
+  updated_at              DateTime         @updatedAt
+  fooditems               UploadFoodItem[]
+  ai_predictions          aiprediction[]   @relation("AiPrediction_Upload")
+  associated_inventory    inventory?       @relation("Upload_Inventory", fields: [associated_inventory_id], references: [id])
+  associated_log          log?             @relation("Upload_Log", fields: [associated_log_id], references: [id])
+  user                    user?            @relation("Upload_User", fields: [user_id], references: [id])
 
   @@index([associated_inventory_id])
   @@index([associated_log_id])
+  @@index([user_id])
+}
+
+/// Join table for upload <-> fooditem many-to-many
+model UploadFoodItem {
+  id         Int      @id @default(autoincrement())
+  uploadId   Int
+  foodItemId Int
+  created_at DateTime @default(now())
+  fooditem   fooditem @relation(fields: [foodItemId], references: [id], onDelete: Cascade)
+  upload     upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@unique([uploadId, foodItemId])
+  @@index([uploadId])
+  @@index([foodItemId])
 }
 
 model user {
@@ -113,8 +136,10 @@ model user {
   created_at          DateTime       @default(now())
   updated_at          DateTime       @updatedAt
   ai_predictions      aiprediction[] @relation("AiPrediction_User")
+  fooditems           fooditem[]     @relation("FoodItem_User")
   inventories         inventory[]    @relation("Inventory_User")
   logs                log[]          @relation("Log_User")
+  uploads             upload[]       @relation("Upload_User")
 }
 
 enum fooditem_category {
