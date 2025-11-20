@@ -157,7 +157,7 @@ ALTER TABLE `upload` ADD CONSTRAINT `upload_associated_log_id_fkey` FOREIGN KEY 
 ALTER TABLE `upload` ADD CONSTRAINT `upload_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `UploadFoodItem` ADD CONSTRAINT `UploadFoodItem_uploadId_fkey` FOREIGN KEY (`uploadId`) REFERENCES `upload`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `UploadFoodItem` ADD CONSTRAINT `UploadFoodItem_foodItemId_fkey` FOREIGN KEY (`foodItemId`) REFERENCES `fooditem`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `UploadFoodItem` ADD CONSTRAINT `UploadFoodItem_foodItemId_fkey` FOREIGN KEY (`foodItemId`) REFERENCES `fooditem`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `UploadFoodItem` ADD CONSTRAINT `UploadFoodItem_uploadId_fkey` FOREIGN KEY (`uploadId`) REFERENCES `upload`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
