@@ -31,7 +31,7 @@ export const registerUser = async (payload) => {
       full_name,
       email,
       password_hash,
-      role: role ?? "user",
+      role: role ?? null,
       household_size: household_size ?? null,
       dietary_preferences: dietary_preferences ?? null,
       budget_range: budget_range ?? null,
@@ -51,7 +51,7 @@ export const loginUser = async ({ email, password }) => {
   const ok = await bcrypt.compare(password, user.password_hash);
   if (!ok) throwError(401, "Invalid credentials");
 
-  const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, {
+  const token = jwt.sign({ id: user.id, email: user.email, role: "user" }, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,
   });
 
