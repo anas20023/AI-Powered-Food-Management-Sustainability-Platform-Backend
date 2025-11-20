@@ -28,7 +28,7 @@ model fooditem {
   category        fooditem_category
   expiration_days Int?
   cost_per_unit   Decimal?          @db.Decimal(10, 2)
-  unit            String?
+  unit            String?           @default("")
   created_at      DateTime          @default(now())
   updated_at      DateTime          @updatedAt
   inventories     inventory[]       @relation("Inventory_FoodItem")

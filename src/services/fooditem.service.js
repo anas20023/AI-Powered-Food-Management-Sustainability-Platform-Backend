@@ -11,41 +11,46 @@ export const listFoodItems = async ({ category, search, limit = 50, offset = 0 }
   const where = {};
   if (category) where.category = category;
   if (search) where.name = { contains: search, mode: "insensitive" };
+  // console.log("Something Hapenning !");
 
-  const items = await prisma.foodItem.findMany({
+  const items = await prisma.fooditem.findMany({
     where,
     skip: Number(offset),
     take: Number(limit),
     orderBy: { name: "asc" },
   });
 
-  const total = await prisma.foodItem.count({ where });
+  const total = await prisma.fooditem.count({ where });
   return { items, total };
 };
 
-export const getFoodItem = async (id) => {
-  const item = await prisma.foodItem.findUnique({ where: { id } });
+export const getFoodItem = async (UserID) => {
+  const id=parseInt(UserID)
+  //  console.log(id);
+  const item = await prisma.fooditem.findUnique({ where: { id } });
   if (!item) throwError(404, "Food item not found");
   return item;
 };
 
 export const createFoodItem = async (payload) => {
-  // payload should contain: name, category, expiration_days, cost_per_unit, unit
+  // payload should contain: name, category, expiration_days, cost_per_unit
   if (!payload.name || !payload.category) throwError(400, "name and category required");
-  const item = await prisma.foodItem.create({ data: payload });
+  const item = await prisma.fooditem.create({ data: payload });
   return item;
 };
 
-export const updateFoodItem = async (id, payload) => {
-  const existing = await prisma.foodItem.findUnique({ where: { id } });
+export const updateFoodItem = async (UserID, payload) => {
+  const id= parseInt(UserID);
+  const existing = await prisma.fooditem.findUnique({ where: { id } });
   if (!existing) throwError(404, "Food item not found");
-  const updated = await prisma.foodItem.update({ where: { id }, data: payload });
+  const updated = await prisma.fooditem.update({ where: { id }, data: payload });
   return updated;
 };
 
-export const deleteFoodItem = async (id) => {
-  const existing = await prisma.foodItem.findUnique({ where: { id } });
+export const deleteFoodItem = async (UserID) => {
+  const id=parseInt(UserID)
+  const existing = await prisma.fooditem.findUnique({ where: { id } });
   if (!existing) throwError(404, "Food item not found");
-  await prisma.foodItem.delete({ where: { id } });
+  await prisma.fooditem.delete({ where: { id } });
   return true;
 };
