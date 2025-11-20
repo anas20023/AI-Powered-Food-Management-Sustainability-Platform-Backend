@@ -4,7 +4,7 @@ import auth from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-// router.get("/", auth, getLogs);
+router.get("/", auth, logsController.getLogs);
 // router.post("/", auth, createLog);
 // router.delete("/:id", auth, deleteLog);
 

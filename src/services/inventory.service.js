@@ -1,4 +1,5 @@
 import prisma from "../config/PrismaClient.js";
+import { user_role } from "../generated/prisma/index.js";
 
 const throwError = (status = 400, message = "Error", details = null) => {
   const e = new Error(message);
@@ -196,3 +197,6 @@ export const deleteInventory = async ({ userId, id }) => {
 
   return true;
 };
+export const refreshInventory= async({user_id,inventoryID})=>{
+  
+}
