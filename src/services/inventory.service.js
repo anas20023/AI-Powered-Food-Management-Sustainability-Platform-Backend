@@ -58,7 +58,7 @@ export const createInventory = async ({ userId, payload }) => {
   // Check existing inventory for this user + food_item
   const existing = await prisma.inventory.findFirst({
     where: {
-      user_Id: id,
+      user_id: id,
       food_item_id: Number(food_item_id)
     }
   });
@@ -82,7 +82,7 @@ export const createInventory = async ({ userId, payload }) => {
 
   // create new - only set dates if provided (avoid Invalid Date)
   const data = {
-    user_Id: id,
+    user_id: id,
     food_item_id: Number(food_item_id),
     quantity: qty,
     notes: notes ?? null,
@@ -105,7 +105,7 @@ export const updateInventory = async ({ userId, id, updates }) => {
 
   const inv = await prisma.inventory.findUnique({ where: { id: iid } });
   if (!inv) throwError(404, "Inventory item not found");
-  if (inv.user_Id !== uid) throwError(403, "Forbidden");
+  if (inv.user_id !== uid) throwError(403, "Forbidden");
 
   // Block modifications if inventory is expired
   if (String(inv.status).toLowerCase() === "expired") {
