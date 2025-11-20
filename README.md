@@ -79,7 +79,7 @@ DATABASE_URL="mysql://user:password@host:post/DatabaseName?ssl-mode=REQUIRED"
     ```
 
 ## 📡 Scripts
-
+### Use this script in your `package.json` file
 ```json
 {
   "dev": "nodemon server.js",
