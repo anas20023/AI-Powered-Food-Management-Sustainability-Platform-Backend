@@ -116,16 +116,16 @@ ALTER TABLE `aiprediction` ADD CONSTRAINT `aiprediction_upload_id_fkey` FOREIGN 
 ALTER TABLE `aiprediction` ADD CONSTRAINT `aiprediction_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `inventory` ADD CONSTRAINT `inventory_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE `inventory` ADD CONSTRAINT `inventory_food_item_id_fkey` FOREIGN KEY (`food_item_id`) REFERENCES `fooditem`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `log` ADD CONSTRAINT `log_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `inventory` ADD CONSTRAINT `inventory_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `log` ADD CONSTRAINT `log_food_item_id_fkey` FOREIGN KEY (`food_item_id`) REFERENCES `fooditem`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `log` ADD CONSTRAINT `log_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `upload` ADD CONSTRAINT `upload_associated_inventory_id_fkey` FOREIGN KEY (`associated_inventory_id`) REFERENCES `inventory`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

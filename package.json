@@ -1,9 +1,7 @@
 {
     "scripts": {
         "dev": "nodemon server.js",
-        "build": "prisma generate && tsc",
-        "prisma:generate": "prisma generate",
-        "migrate:deploy": "prisma migrate deploy"
+        "postinstall": "prisma db pull && prisma generate && prisma migrate deploy"
     },
     "devDependencies": {
         "nodemon": "^3.1.10",
