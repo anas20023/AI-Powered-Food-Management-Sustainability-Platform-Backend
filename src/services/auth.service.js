@@ -31,7 +31,7 @@ export const registerUser = async (payload) => {
       full_name,
       email,
       password_hash,
-      role: role ?? null,
+      role: role ?? "user",
       household_size: household_size ?? null,
       dietary_preferences: dietary_preferences ?? null,
       budget_range: budget_range ?? null,
