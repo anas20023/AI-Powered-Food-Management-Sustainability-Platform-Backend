@@ -50,7 +50,7 @@ export const createInventory = async ({ userId, payload }) => {
   } = payload;
 
   if (!food_item_id) throwError(400, "food_item_id is required");
-  if (quantity === undefined || quantity === null) throwError(400, "quantity is required");
+  if (quantity === undefined || quantity === null || quantity===0) throwError(400, "quantity is required");
 
   const qty = Number(quantity);
   if (isNaN(qty) || qty <= 0) throwError(400, "quantity must be a positive number");
