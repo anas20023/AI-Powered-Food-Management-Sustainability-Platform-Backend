@@ -1,7 +1,7 @@
 {
     "scripts": {
         "dev": "nodemon server.js",
-        "build": "prisma generate",
+        "build": "prisma generate && tsc",
         "prisma:generate": "prisma generate",
         "migrate:deploy": "prisma migrate deploy"
     },
