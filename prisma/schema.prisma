@@ -150,6 +150,15 @@ enum fooditem_category {
   Drinks
   Fast_Food
 }
+model consumption {
+  id           Int     @id @default(autoincrement())
+  user_id      Int
+  food_item_id Int
+  cost         Int
+  quantity     Int
+  category     String? @db.VarChar(36) 
+  @@map("consumption")
+}
 
 enum inventory_status {
   Available

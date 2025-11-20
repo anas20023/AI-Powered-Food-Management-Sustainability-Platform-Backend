@@ -126,6 +126,18 @@ CREATE TABLE `user` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `consumption` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `user_id` INTEGER NOT NULL,
+    `food_item_id` INTEGER NOT NULL,
+    `cost` INTEGER NOT NULL,
+    `quantity` INTEGER NOT NULL,
+    `category` VARCHAR(36) NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- AddForeignKey
 ALTER TABLE `aiprediction` ADD CONSTRAINT `aiprediction_upload_id_fkey` FOREIGN KEY (`upload_id`) REFERENCES `upload`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
