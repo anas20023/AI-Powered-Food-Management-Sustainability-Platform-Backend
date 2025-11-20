@@ -37,3 +37,13 @@ export const deleteInventoryItem = async (req, res) => {
     return sendError(res, err.message || "Failed", err.status || 500);
   }
 };
+export const refreshInventory= async(req,res)=>{
+  // console.log(parseInt(req.user.id));
+  try {
+    const data= await inventoryService.refreshInventory(parseInt(req.user.id));
+    success(res,data,"Inventory Refreshed Sucessfully !",200)
+  } catch (err) {
+    sendError(res,err.message,400)
+    
+  }
+}

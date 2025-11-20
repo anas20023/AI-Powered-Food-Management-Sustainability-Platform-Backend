@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.get("/", auth, inventoryController.getInventory);
 router.post("/", auth, inventoryController.createInventoryItem);
+router.post("/refresh", auth, inventoryController.refreshInventory);
 router.put("/:id", auth, inventoryController.updateInventoryItem);
 router.delete("/:id", auth, inventoryController.deleteInventoryItem);
 
