@@ -4,7 +4,7 @@ The AI-Powered Food Management & Sustainability Platform is a smart system desig
 
 It combines inventory monitoring, consumption logging, resource recommendations, and AI-assisted insights to support better meal planning, minimize waste, and promote sustainable living.
 
-## 🚀 Overview
+## 🚀 Overview()
 
 The backend provides:
 
