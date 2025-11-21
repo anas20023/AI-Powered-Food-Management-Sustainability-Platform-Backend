@@ -3,8 +3,7 @@ import { success, error as sendError } from "../utils/response.js";
 
 export const getInventory = async (req, res) => {
   try {
-    const { category, expiringWithinDays, status, limit, offset } = req.query;
-    const result = await inventoryService.listInventory({ userId: req.user?.id, category, expiringWithinDays, status, limit, offset });
+    const result = await inventoryService.listInventory({ userId: req.user?.id });
     return success(res, result, "Inventory fetched", 200);
   } catch (err) {
     return sendError(res, err.message || "Failed", err.status || 500);
