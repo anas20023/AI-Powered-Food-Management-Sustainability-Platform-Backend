@@ -1,12 +1,17 @@
-// /mnt/data/innovatex_bubt_hackathon_part1.docx.pdf
 import * as uploadsService from "../services/uploads.service.js";
 import { success, error as sendError } from "../utils/response.js";
 
 export const uploadFile = async (req, res) => {
   try {
-    const file = req.file;
-    const { associated_inventory_id, associated_log_id } = req.body;
-    const upl = await uploadsService.saveUpload({ userId: req.user?.id, file, associated_inventory_id, associated_log_id });
+    const { filename, url, associated_inventory_id, associated_log_id } = req.body;
+    // console.log(req.body);
+    const upl = await uploadsService.saveUpload({ 
+      userId: req.user?.id, 
+      filename, 
+      url, 
+      associated_inventory_id, 
+      associated_log_id 
+    });
     return success(res, upl, "Upload saved", 201);
   } catch (err) {
     return sendError(res, err.message || "Upload failed", err.status || 500);
