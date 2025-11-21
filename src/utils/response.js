@@ -3,7 +3,7 @@ const RESP_SENT_FLAG = Symbol.for("res.sent");
 export const success = (res, data = null, message = "Success", status = 200) => {
   if (res.headersSent || res.locals[RESP_SENT_FLAG]) return;
   res.locals[RESP_SENT_FLAG] = true;
- if(!data)  return res.status(status).json({ success: true, message });
+ if(data===null || (Array.isArray(data) && data.length===0))  return res.status(status).json({ success: true, message });
  else  return res.status(status).json({ success: true, message, data });
 };
 

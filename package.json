@@ -7,6 +7,9 @@
         "nodemon": "^3.1.10",
         "prisma": "^6.19.0"
     },
+    "prisma": {
+        "seed": "node ../Backend/prisma/resource.seed.js"
+    },
     "name": "backend",
     "version": "1.0.0",
     "main": "server.js",
