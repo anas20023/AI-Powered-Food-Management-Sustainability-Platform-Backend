@@ -116,7 +116,6 @@ export const createInventory = async ({ userId, payload }) => {
   return createdInventory;
 };
 
-
 export const updateInventory = async ({ userId, id, updates }) => {
   if (!userId) throwError(401, "Unauthorized");
   const uid = Number(userId);
@@ -135,7 +134,7 @@ export const updateInventory = async ({ userId, id, updates }) => {
     throwError(400, "Cannot modify an expired inventory item");
   }
 
-  // Whitelist scalar fields only
+  // Whitelist scalar fields only (ignore food_item_id if provided in updates)
   const allowedFields = ['quantity', 'purchased_date', 'expiry_date', 'notes', 'status'];
   const raw = updates || {};
   const candidate = {};
@@ -149,11 +148,10 @@ export const updateInventory = async ({ userId, id, updates }) => {
   // Validate / sanitize quantity if present
   if (candidate.quantity !== undefined) {
     const q = Number(candidate.quantity);
-    const currentQty = Number(inv.quantity || 0);
-    if (isNaN(q) || q < 0 || q > currentQty) {
-      throwError(400, `quantity must be a number between 0 and ${currentQty}`);
+    if (isNaN(q) || q < 0) {
+      throwError(400, `quantity must be a non-negative number`);
     }
-    candidate.quantity = q;
+    candidate.quantity = Math.floor(q); // integers in your schema
   }
 
   // Validate / sanitize dates
@@ -170,15 +168,11 @@ export const updateInventory = async ({ userId, id, updates }) => {
 
   // Best-effort: fetch fooditem to get category and cost_per_unit (if any)
   let foodItem = null;
-  try {
-    if (inv.food_item_id) {
-      foodItem = await prisma.fooditem.findUnique({ where: { id: inv.food_item_id } });
-    }
-  } catch (e) {
-    foodItem = null;
+  if (inv.food_item_id) {
+    foodItem = await prisma.fooditem.findUnique({ where: { id: inv.food_item_id } });
   }
 
-  // Determine consumption (only when quantity decreased) and only if food_item_id exists
+  // Determine if consumption should be recorded (only when quantity decreased)
   let consumptionNeeded = false;
   let consumedQuantity = 0;
   if (candidate.quantity !== undefined && inv.food_item_id) {
@@ -193,32 +187,40 @@ export const updateInventory = async ({ userId, id, updates }) => {
   // Build consumption payload (guarded by consumptionNeeded)
   let consumptionPayload = null;
   if (consumptionNeeded) {
-    // Use fooditem.cost_per_unit if available (schema: fooditem.cost_per_unit Int?), else fallback to 0.
     const perUnitCost =
       foodItem && typeof foodItem.cost_per_unit !== "undefined" && foodItem.cost_per_unit !== null
         ? Number(foodItem.cost_per_unit)
         : 0;
 
+    // total cost calculation — preserve integer semantics (schema uses Int)
     const totalCost = Math.round(perUnitCost * consumedQuantity);
 
-    // consumption.food_item_id is non-nullable in your schema, so use inv.food_item_id (guarded above)
     consumptionPayload = {
       user_id: uid,
       food_item_id: inv.food_item_id,
       cost: totalCost,
       quantity: consumedQuantity,
-      category: foodItem?.category ?? null, // consumption.category is VarChar(36)
+      category: foodItem?.category ?? null
     };
   }
 
-  // Build log payload using schema field names; include consumed_quantity for audit clarity
+  // Build a log payload using only fields in the `log` model
   const logPayload = {
-    log_title: `Inventory updated (id=${iid})`,
+    log_title: (() => {
+      if (consumptionNeeded) {
+        return `Inventory updated (id=${iid}) — consumed ${consumedQuantity}, qty: ${inv.quantity} -> ${candidate.quantity}`;
+      }
+      if (candidate.quantity !== undefined) {
+        return `Inventory updated (id=${iid}) — qty: ${inv.quantity} -> ${candidate.quantity}`;
+      }
+      return `Inventory updated (id=${iid})`;
+    })(),
     user_id: uid,
     food_item_id: inv.food_item_id ?? null,
+    // For log.quantity we store the resulting inventory quantity (matches your schema semantics)
     quantity: candidate.quantity !== undefined ? candidate.quantity : inv.quantity,
     category: foodItem?.category ?? null,
-    // you can add an extra field if your log model supports JSON or extra fields
+    logged_at: new Date()
   };
 
   // Build updateData with only scalar fields (so Prisma doesn't expect relations)
@@ -245,7 +247,6 @@ export const updateInventory = async ({ userId, id, updates }) => {
   const updatedInventory = results[0];
   return updatedInventory;
 };
-
 
 export const deleteInventory = async ({ userId, id }) => {
   if (!userId) throwError(401, "Unauthorized");
