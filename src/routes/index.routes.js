@@ -7,7 +7,7 @@ import logsRoutes from "./logs.routes.js";
 import resourceRoutes from "./resource.routes.js";
 import uploadRoutes from "./uploads.routes.js";
 import consumption from "./consumption.route.js"
-
+import analysisRoutes from "./analytis.routes.js";
 
 const router = express.Router();
 
@@ -19,6 +19,8 @@ router.use("/logs", logsRoutes);
 router.use("/resources", resourceRoutes);
 router.use("/consumption", consumption);
 router.use("/uploads", uploadRoutes);
+router.use("/analysis", analysisRoutes);
+
 
 
 export default router;
