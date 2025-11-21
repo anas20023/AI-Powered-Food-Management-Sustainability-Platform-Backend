@@ -4,13 +4,14 @@ import bodyParser from 'body-parser';
 import router from './routes/index.routes.js';
 import errorMiddleware from './middlewares/error.middleware.js';
 import requestLogger from './middlewares/requestLogger.js';
-
+import cookieParser from 'cookie-parser';
 
 const app = express();
 app.use(requestLogger)
 
 app.use(cors());
 app.use(bodyParser.json());
+app.use(cookieParser())
 app.use('/api', router);
 
 app.use('/',(req,res)=>{

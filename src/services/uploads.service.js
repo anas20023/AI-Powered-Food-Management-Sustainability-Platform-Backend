@@ -1,4 +1,3 @@
-// /mnt/data/innovatex_bubt_hackathon_part1.docx.pdf
 import prisma from "../config/PrismaClient.js";
 
 const throwError = (status = 400, message = "Error", details = null) => {
@@ -8,31 +7,48 @@ const throwError = (status = 400, message = "Error", details = null) => {
   throw e;
 };
 
-/**
- * Save upload metadata. `file` is multer's file object.
- * We store url = file.path (local path) OR S3 location (if using S3).
- */
-export const saveUpload = async ({ userId, file, associated_inventory_id = null, associated_log_id = null }) => {
+export const saveUpload = async ({ userId, filename, url, associated_inventory_id, associated_log_id }) => {
   if (!userId) throwError(401, "Unauthorized");
-  if (!file) throwError(400, "No file provided");
+  if (!url) throwError(400, "No URL provided");
+  if (!filename) throwError(400, "No filename provided");
 
-  const filePath = file.path || file.location || null;
-  const filename = file.filename || (filePath ? filePath.split("/").pop() : null);
+  const uid = Number(userId);
+  if (Number.isNaN(uid)) throwError(400, "Invalid userId");
+
+  // verify user exists
+  const user = await prisma.user.findUnique({ where: { id: uid } });
+  if (!user) throwError(404, "User not found");
+
+  // verify optional inventory/log if provided
+  let invId = associated_inventory_id ?? null;
+  if (invId !== null) {
+    invId = Number(invId);
+    if (Number.isNaN(invId)) throwError(400, "Invalid associated_inventory_id");
+    const inv = await prisma.inventory.findUnique({ where: { id: invId } });
+    if (!inv) throwError(404, "Associated inventory not found");
+  }
+
+  let logId = associated_log_id ?? null;
+  if (logId !== null) {
+    logId = Number(logId);
+    if (Number.isNaN(logId)) throwError(400, "Invalid associated_log_id");
+    const log = await prisma.log.findUnique({ where: { id: logId } });
+    if (!log) throwError(404, "Associated log not found");
+  }
 
   const upl = await prisma.upload.create({
     data: {
-      user_id: userId,
+      user_id: uid,
       filename,
-      url: filePath,
-      mimetype: file.mimetype ?? null,
-      size_bytes: file.size ?? null,
-      associated_inventory_id: associated_inventory_id ?? null,
-      associated_log_id: associated_log_id ?? null,
+      url,
+      associated_inventory_id: invId,
+      associated_log_id: logId,
     },
   });
 
   return upl;
 };
+
 
 export const getUpload = async (userId, id) => {
   if (!userId) throwError(401, "Unauthorized");
@@ -47,18 +63,6 @@ export const deleteUpload = async (userId, id) => {
   const u = await prisma.upload.findUnique({ where: { id } });
   if (!u) throwError(404, "Upload not found");
   if (u.user_id !== userId) throwError(403, "Forbidden");
-
-  // deletion of file is best-effort (do not crash on fs error)
-  try {
-    if (u.url && u.url.startsWith("/")) {
-      // local absolute path
-      await fs.unlink(u.url).catch(() => {});
-    } else if (u.url && u.url.startsWith("./")) {
-      await fs.unlink(u.url).catch(() => {});
-    }
-  } catch (e) {
-    // ignore
-  }
 
   await prisma.upload.delete({ where: { id } });
   return true;
