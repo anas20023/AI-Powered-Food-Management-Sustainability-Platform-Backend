@@ -24,102 +24,93 @@ export const createInventory = async ({ userId, payload }) => {
   const id = Number(userId);
   if (!id || isNaN(id)) throwError(401, "Unauthorized");
 
-  let {
-    food_item_id,
-    quantity,
-    purchased_date,
-    expiry_date,
-    notes,
-    status
-  } = payload;
+  let { food_item_id, quantity, purchased_date, expiry_date, notes, status } = payload;
 
-  if (!food_item_id) throwError(400, "food_item_id is required");
+  if (food_item_id === undefined || food_item_id === null) throwError(400, "food_item_id is required");
   if (quantity === undefined || quantity === null) throwError(400, "quantity is required");
 
   const qty = Number(quantity);
   if (isNaN(qty) || qty <= 0) throwError(400, "quantity must be a positive number");
 
-  // Best-effort: fetch food item to record category in logs
-  let foodItem = null;
-  try {
-    foodItem = await prisma.fooditem.findUnique({ where: { id: Number(food_item_id) } });
-  } catch (e) {
-    foodItem = null;
+  // Find the food item (if not found, create a minimal one)
+  let foodItem = await prisma.fooditem.findUnique({ where: { id: Number(food_item_id) } });
+  if (!foodItem) {
+    foodItem = await prisma.fooditem.create({
+      data: {
+        name: `Item ${food_item_id}`,
+        category: "Snacks", // default - pick what makes sense for you
+        user_id: id
+      }
+    });
   }
 
-  // Check existing inventory for this user + food_item
-  const existing = await prisma.inventory.findFirst({
-    where: {
+  // Find existing inventory for this user + food item
+  const existingInventory = await prisma.inventory.findFirst({
+    where: { user_id: id, food_item_id: foodItem.id }
+  });
+
+  // Build a log payload using only fields that exist in the `log` model.
+  // Avoid spreading arbitrary `extra` keys into the object.
+  const buildLog = ({ title, foodItemId, qtyForLog }) => {
+    return {
+      log_title: title,
       user_id: id,
-      food_item_id: Number(food_item_id)
-    }
-  });
+      food_item_id: foodItemId ?? null,
+      quantity: qtyForLog,
+      category: foodItem?.category ?? null,
+      logged_at: new Date()
+    };
+  };
 
-  // Log builder helper
-  const buildLogPayload = ({ title, userIdForLog, foodItemId, qtyForLog, category, extra = {} }) => ({
-    log_title: title,
-    user_Id: userIdForLog,            // keep your existing log field name
-    food_item_id: foodItemId ?? null,
-    quantity: qtyForLog,
-    category: category ?? null,
-    ...extra
-  });
-
-  if (existing) {
-    // Merge into existing inventory: increase quantity
-    const newQuantity = Number(existing.quantity || 0) + qty;
-
-    const updateData = {
-      quantity: newQuantity,
-      purchased_date: purchased_date ? new Date(purchased_date) : existing.purchased_date,
-      expiry_date: expiry_date ? new Date(expiry_date) : existing.expiry_date,
-      notes: notes ?? existing.notes,
-      status: status ?? existing.status
+  if (existingInventory) {
+    // inventory update payload: only inventory fields
+    const inventoryUpdateData = {
+      quantity: Number(existingInventory.quantity || 0) + qty,
+      purchased_date: purchased_date ? new Date(purchased_date) : existingInventory.purchased_date,
+      expiry_date: expiry_date ? new Date(expiry_date) : existingInventory.expiry_date,
+      notes: notes ?? existingInventory.notes,
+      status: status ?? existingInventory.status
     };
 
-    const logPayload = buildLogPayload({
-      title: `Inventory added (merged) (id=${existing.id})`,
-      userIdForLog: id,
-      foodItemId: existing.food_item_id,
-      qtyForLog: newQuantity,
-      category: foodItem?.category ?? existing.category ?? null,
-      extra: { added_quantity: qty } // helpful to see how much was added
+    // build a clear title that includes the added quantity (no unknown keys)
+    const logTitle = `Inventory merged (inventoryId=${existingInventory.id}) — added ${qty}, previous ${existingInventory.quantity}, new ${inventoryUpdateData.quantity}`;
+
+    const logPayload = buildLog({
+      title: logTitle,
+      foodItemId: existingInventory.food_item_id,
+      qtyForLog: qty
     });
 
-    // Atomic update + log
-    const [updatedInventory] = await prisma.$transaction([
-      prisma.inventory.update({ where: { id: existing.id }, data: updateData }),
+    // transaction: update inventory and create the log atomically
+    const [updatedInventory, createdLog] = await prisma.$transaction([
+      prisma.inventory.update({ where: { id: existingInventory.id }, data: inventoryUpdateData }),
       prisma.log.create({ data: logPayload })
     ]);
 
     return updatedInventory;
   }
 
-  // create new - only set dates if provided (avoid Invalid Date)
-  const data = {
+  // No existing inventory — create inventory and log
+  const inventoryCreateData = {
     user_id: id,
-    food_item_id: Number(food_item_id),
+    food_item_id: foodItem.id,
     quantity: qty,
     notes: notes ?? null,
+    ...(purchased_date ? { purchased_date: new Date(purchased_date) } : {}),
+    ...(expiry_date ? { expiry_date: new Date(expiry_date) } : {}),
+    ...(status ? { status } : {})
   };
 
-  if (purchased_date) data.purchased_date = new Date(purchased_date);
-  if (expiry_date) data.expiry_date = new Date(expiry_date);
-  if (status) data.status = status;
-
-  const logPayload = buildLogPayload({
-    title: `Inventory created`,
-    userIdForLog: id,
-    foodItemId: Number(food_item_id),
-    qtyForLog: qty,
-    category: foodItem?.category ?? null,
-    extra: { created: true }
+  const logTitle = `Inventory created (food_item_id=${foodItem.id}) — qty ${qty}`;
+  const logPayloadForCreate = buildLog({
+    title: logTitle,
+    foodItemId: foodItem.id,
+    qtyForLog: qty
   });
 
-  // Atomic create inventory + log
-  const [createdInventory] = await prisma.$transaction([
-    prisma.inventory.create({ data }),
-    prisma.log.create({ data: logPayload })
+  const [createdInventory, createdLog] = await prisma.$transaction([
+    prisma.inventory.create({ data: inventoryCreateData }),
+    prisma.log.create({ data: logPayloadForCreate })
   ]);
 
   return createdInventory;
@@ -143,7 +134,7 @@ export const updateInventory = async ({ userId, id, updates }) => {
     throwError(400, "Cannot modify an expired inventory item");
   }
 
-  // Whitelist scalar fields only
+  // Whitelist scalar fields only (ignore food_item_id if provided in updates)
   const allowedFields = ['quantity', 'purchased_date', 'expiry_date', 'notes', 'status'];
   const raw = updates || {};
   const candidate = {};
@@ -157,11 +148,10 @@ export const updateInventory = async ({ userId, id, updates }) => {
   // Validate / sanitize quantity if present
   if (candidate.quantity !== undefined) {
     const q = Number(candidate.quantity);
-    const currentQty = Number(inv.quantity || 0);
-    if (isNaN(q) || q < 0 || q > currentQty) {
-      throwError(400, `quantity must be a number between 0 and ${currentQty}`);
+    if (isNaN(q) || q < 0) {
+      throwError(400, `quantity must be a non-negative number`);
     }
-    candidate.quantity = q;
+    candidate.quantity = Math.floor(q); // integers in your schema
   }
 
   // Validate / sanitize dates
@@ -178,15 +168,11 @@ export const updateInventory = async ({ userId, id, updates }) => {
 
   // Best-effort: fetch fooditem to get category and cost_per_unit (if any)
   let foodItem = null;
-  try {
-    if (inv.food_item_id) {
-      foodItem = await prisma.fooditem.findUnique({ where: { id: inv.food_item_id } });
-    }
-  } catch (e) {
-    foodItem = null;
+  if (inv.food_item_id) {
+    foodItem = await prisma.fooditem.findUnique({ where: { id: inv.food_item_id } });
   }
 
-  // Determine consumption (only when quantity decreased) and only if food_item_id exists
+  // Determine if consumption should be recorded (only when quantity decreased)
   let consumptionNeeded = false;
   let consumedQuantity = 0;
   if (candidate.quantity !== undefined && inv.food_item_id) {
@@ -201,32 +187,40 @@ export const updateInventory = async ({ userId, id, updates }) => {
   // Build consumption payload (guarded by consumptionNeeded)
   let consumptionPayload = null;
   if (consumptionNeeded) {
-    // Use fooditem.cost_per_unit if available (schema: fooditem.cost_per_unit Int?), else fallback to 0.
     const perUnitCost =
       foodItem && typeof foodItem.cost_per_unit !== "undefined" && foodItem.cost_per_unit !== null
         ? Number(foodItem.cost_per_unit)
         : 0;
 
+    // total cost calculation — preserve integer semantics (schema uses Int)
     const totalCost = Math.round(perUnitCost * consumedQuantity);
 
-    // consumption.food_item_id is non-nullable in your schema, so use inv.food_item_id (guarded above)
     consumptionPayload = {
       user_id: uid,
       food_item_id: inv.food_item_id,
       cost: totalCost,
       quantity: consumedQuantity,
-      category: foodItem?.category ?? null, // consumption.category is VarChar(36)
+      category: foodItem?.category ?? null
     };
   }
 
-  // Build log payload using schema field names; include consumed_quantity for audit clarity
+  // Build a log payload using only fields in the `log` model
   const logPayload = {
-    log_title: `Inventory updated (id=${iid})`,
+    log_title: (() => {
+      if (consumptionNeeded) {
+        return `Inventory updated (id=${iid}) — consumed ${consumedQuantity}, qty: ${inv.quantity} -> ${candidate.quantity}`;
+      }
+      if (candidate.quantity !== undefined) {
+        return `Inventory updated (id=${iid}) — qty: ${inv.quantity} -> ${candidate.quantity}`;
+      }
+      return `Inventory updated (id=${iid})`;
+    })(),
     user_id: uid,
     food_item_id: inv.food_item_id ?? null,
+    // For log.quantity we store the resulting inventory quantity (matches your schema semantics)
     quantity: candidate.quantity !== undefined ? candidate.quantity : inv.quantity,
     category: foodItem?.category ?? null,
-    // you can add an extra field if your log model supports JSON or extra fields
+    logged_at: new Date()
   };
 
   // Build updateData with only scalar fields (so Prisma doesn't expect relations)
@@ -253,7 +247,6 @@ export const updateInventory = async ({ userId, id, updates }) => {
   const updatedInventory = results[0];
   return updatedInventory;
 };
-
 
 export const deleteInventory = async ({ userId, id }) => {
   if (!userId) throwError(401, "Unauthorized");
