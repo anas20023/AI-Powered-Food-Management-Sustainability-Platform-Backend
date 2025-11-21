@@ -142,6 +142,19 @@ model user {
   uploads             upload[]       @relation("Upload_User")
 }
 
+model consumption {
+  id           Int       @id @default(autoincrement())
+  user_id      Int
+  food_item_id Int
+  cost         Int
+  quantity     Int
+  category     String?   @db.VarChar(36)
+  created_at   DateTime? @default(now())
+  updated_at   DateTime? @updatedAt
+
+  @@map("consumption")
+}
+
 enum fooditem_category {
   Snacks
   Vegetable
@@ -149,15 +162,6 @@ enum fooditem_category {
   Dairy
   Drinks
   Fast_Food
-}
-model consumption {
-  id           Int     @id @default(autoincrement())
-  user_id      Int
-  food_item_id Int
-  cost         Int
-  quantity     Int
-  category     String? @db.VarChar(36) 
-  @@map("consumption")
 }
 
 enum inventory_status {
