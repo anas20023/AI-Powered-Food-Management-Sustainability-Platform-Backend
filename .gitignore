@@ -9,7 +9,7 @@ npm-debug.log
 dist/
 build/
 coverage/
-
+data
 # IDE specific files
 .vscode/
 .idea/
