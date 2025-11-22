@@ -18,7 +18,12 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const result = await authService.loginUser(req.body);
-    return success(res, result, "Logged in", 200);
+    res.cookie('JWT',result.token,{
+      expires: new Date(Date.now() + 3600000), 
+    httpOnly: true, 
+    secure: true 
+    })
+    return success(res, {user:result.user}, "Logged in", 200);
   } catch (err) {
     const status = err.status || 500;
     const message = err.message || "Internal server error";
