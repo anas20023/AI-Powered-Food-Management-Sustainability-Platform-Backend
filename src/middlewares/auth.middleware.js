@@ -6,13 +6,13 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 export default function auth(req, res, next) {
   try {
-    const authHeader = req.headers.authorization;
+    // const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return error(res, "No token provided", 401);
-    }
+    // if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    //   return error(res, "No token provided", 401);
+    // }
 
-    const token = authHeader.split(" ")[1];
+    const token = req.cookie;
 
     if (!token) {
       return error(res, "Invalid token", 401);
